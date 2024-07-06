@@ -7,7 +7,6 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:http/http.dart';
-import 'package:in_app_update/in_app_update.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:sgbus/components/searchDelegate.dart';
@@ -23,7 +22,7 @@ import 'package:sgbus/scripts/data.dart';
 import 'package:sgbus/scripts/downloadData.dart';
 import 'package:sgbus/scripts/themes.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:url_launcher/url_launcher.dart';
+// import 'package:url_launcher/url_launcher.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -204,44 +203,44 @@ class _RootPageState extends State<RootPage> {
         isLoaded = true;
       });
 
-      try {
-        AppUpdateInfo updateCheckRes = await InAppUpdate.checkForUpdate();
-        if (updateCheckRes.flexibleUpdateAllowed &&
-            updateCheckRes.updateAvailability ==
-                UpdateAvailability.updateAvailable) {
-          showDialog(
-              context: context,
-              builder: (BuildContext context) {
-                return AlertDialog(
-                  title: Text('App update avaliable'),
-                  content: Text(
-                      'A new version of the app has been released and it\'s recomended to update!! You can continue to use the app while the update is downloaded'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: Text('Dismiss'),
-                    ),
-                    TextButton.icon(
-                      onPressed: () {
-                        launchUrl(
-                          Uri.parse(
-                              "https://play.google.com/store/apps/details?id=com.slen.sgbus"),
-                          mode: LaunchMode.externalApplication,
-                        );
-                      },
-                      icon: Icon(Icons.download_rounded),
-                      label: Text('Update'),
-                    )
-                  ],
-                );
-              });
-        }
-      } catch (exception, stackTrace) {
-        await Sentry.captureException(
-          exception,
-          stackTrace: stackTrace,
-        );
-      }
+      // try {
+      //   AppUpdateInfo updateCheckRes = await InAppUpdate.checkForUpdate();
+      //   if (updateCheckRes.flexibleUpdateAllowed &&
+      //       updateCheckRes.updateAvailability ==
+      //           UpdateAvailability.updateAvailable) {
+      //     showDialog(
+      //         context: context,
+      //         builder: (BuildContext context) {
+      //           return AlertDialog(
+      //             title: Text('App update avaliable'),
+      //             content: Text(
+      //                 'A new version of the app has been released and it\'s recomended to update!! You can continue to use the app while the update is downloaded'),
+      //             actions: [
+      //               TextButton(
+      //                 onPressed: () => Navigator.of(context).pop(),
+      //                 child: Text('Dismiss'),
+      //               ),
+      //               TextButton.icon(
+      //                 onPressed: () {
+      //                   launchUrl(
+      //                     Uri.parse(
+      //                         "https://play.google.com/store/apps/details?id=com.slen.sgbus"),
+      //                     mode: LaunchMode.externalApplication,
+      //                   );
+      //                 },
+      //                 icon: Icon(Icons.download_rounded),
+      //                 label: Text('Update'),
+      //               )
+      //             ],
+      //           );
+      //         });
+      //   }
+      // } catch (exception, stackTrace) {
+      //   await Sentry.captureException(
+      //     exception,
+      //     stackTrace: stackTrace,
+      //   );
+      // }
       const String endpoint = serverURL;
 
       final versionEndpoint = Uri.parse('$endpoint/api/launch');
