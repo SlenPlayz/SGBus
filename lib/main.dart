@@ -5,12 +5,14 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:http/http.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:sgbus/components/searchDelegate.dart';
 import 'package:sgbus/env.dart';
+import 'package:sgbus/pages/alert_webview_page.dart';
 import 'package:sgbus/pages/mrt_map.dart';
 import 'package:sgbus/pages/nearby.dart';
 import 'package:sgbus/pages/favourites.dart';
@@ -180,6 +182,8 @@ class _RootPageState extends State<RootPage> {
   bool isDataUpdating = false;
   var prefs;
 
+  List alerts = [];
+
   void checkData() async {
     prefs = await SharedPreferences.getInstance();
     PackageInfo appInfo = await PackageInfo.fromPlatform();
@@ -243,32 +247,69 @@ class _RootPageState extends State<RootPage> {
       // }
       const String endpoint = serverURL;
 
-      final versionEndpoint = Uri.parse('$endpoint/api/launch');
+      final versionEndpoint = Uri.parse('$endpoint/api/v2/launch');
 
       get(versionEndpoint, headers: {"version": appInfo.buildNumber})
           .then((data) async {
         var response = jsonDecode(data.body);
-        List alerts = response['alerts'];
-        alerts.forEach((alert) {
-          showDialog(
-            context: context,
-            builder: (BuildContext context) {
-              return AlertDialog(
-                title: Text(alert['title']),
-                content: Text(alert['message']),
-                actions: [
-                  TextButton(
-                    onPressed: (() {
-                      Navigator.of(context).pop();
-                    }),
-                    child: const Text('Dismiss'),
-                  ),
-                ],
-                scrollable: true,
-              );
-            },
-          );
+        for (var alert in response["alerts"]) {
+          print(alert["startTimestamp"]);
+          if (alert["startTimestamp"] != null) {
+            if ((DateTime.fromMillisecondsSinceEpoch(
+                        int.parse(alert["startTimestamp"])))
+                    .difference(DateTime.now())
+                    .inSeconds <
+                0) {
+              if (alert["endTimestamp"] != null) {
+                print((DateTime.fromMillisecondsSinceEpoch(
+                        int.parse(alert["endTimestamp"])))
+                    .difference(DateTime.now())
+                    .inSeconds);
+                if ((DateTime.fromMillisecondsSinceEpoch(
+                            int.parse(alert["endTimestamp"])))
+                        .difference(DateTime.now())
+                        .inSeconds >
+                    0) {
+                  setState(() {
+                    alerts.add(alert);
+                  });
+                }
+              } else {
+                setState(() {
+                  alerts.add(alert);
+                });
+              }
+            }
+          } else {
+            setState(() {
+              alerts.add(alert);
+            });
+          }
+        }
+        setState(() {
+          alerts = alerts;
         });
+
+        // alerts.forEach((alert) {
+        //   showDialog(
+        //     context: context,
+        //     builder: (BuildContext context) {
+        //       return AlertDialog(
+        //         title: Text(alert['header']),
+        //         content: Text(alert['message']),
+        //         actions: [
+        //           TextButton(
+        //             onPressed: (() {
+        //               Navigator.of(context).pop();
+        //             }),
+        //             child: const Text('Dismiss'),
+        //           ),
+        //         ],
+        //         scrollable: true,
+        //       );
+        //     },
+        //   );
+        // });
 
         int dateDiff =
             DateTime.fromMillisecondsSinceEpoch(int.parse(localVersion))
@@ -340,6 +381,8 @@ class _RootPageState extends State<RootPage> {
 
   @override
   Widget build(BuildContext context) {
+    double width = MediaQuery.sizeOf(context).width;
+
     return isLoaded
         ? Scaffold(
             appBar: AppBar(
@@ -371,6 +414,69 @@ class _RootPageState extends State<RootPage> {
                 (isDataUpdating && currPageIndex != 2)
                     ? LinearProgressIndicator()
                     : Container(),
+                    (currPageIndex != 2) ?
+                Column(
+                  children: [
+                    for (var alert in alerts)
+                      InkWell(
+                        onTap: () {
+                          if (alert["type"] == "webview") {
+                            Navigator.of(context).push(MaterialPageRoute(
+                                builder: (context) => AlertWebviewPage(
+                                    header: alert["header"],
+                                    message: alert["message"],
+                                    link: alert["link"],
+                                    linkDesc: alert["linkDesc"])));
+                          }
+                          if (alert["type"] == "text") {
+                            showModalBottomSheet(
+                              context: context,
+                              builder: (BuildContext context) {
+                                return BottomSheet(
+                                  onClosing: () {},
+                                  showDragHandle: true,
+                                  builder: (BuildContext context) {
+                                    return Column(
+                                      children: [
+                                        Text(
+                                          alert["header"],
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .titleMedium,
+                                        ),
+                                        MarkdownBody(data: alert["message"])
+                                      ],
+                                    );
+                                  },
+                                );
+                              },
+                            );
+                          }
+                        },
+                        child: Container(
+                          width: width,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                alert["header"],
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Container(),
+                              Icon(
+                                Icons.arrow_forward_ios_rounded,
+                                size: 14,
+                              )
+                            ],
+                          ),
+                          padding: EdgeInsets.fromLTRB(15, 4, 10, 4),
+                          color: Theme.of(context).colorScheme.primaryContainer,
+                        ),
+                      )
+                  ],
+                ) : Container(),
                 Expanded(child: pages[currPageIndex]),
               ],
             ),
